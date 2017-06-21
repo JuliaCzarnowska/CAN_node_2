@@ -57,6 +57,7 @@ void Error_Handler(void);
 /* Private function prototypes -----------------------------------------------*/
 void UART_TO_CAN_Transfer();
 void CAN_TO_UART_Transfer();
+void Parse_Identifier();
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -94,22 +95,45 @@ void CAN_TO_UART_Transfer()
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef * huart)
 {
-//	HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
 	if(uartRxMsg[0] == ARINC_MSG){
-		UART_TO_CAN_Transfer();
-		if(HAL_CAN_Transmit_IT(&hcan) != HAL_OK)
-		{
-		    /* Reception Error */
-		    Error_Handler();
-		}
+//		UART_TO_CAN_Transfer();
+
+		HAL_UART_Transmit(&huart2, (uint8_t*) &uartRxMsg, 15, 100);
 	}else if(uartRxMsg[0] == CTRL_MSG){
+
+		  uartTxMsg[0] = 0x08;
+		  // CAN_MSG.data[8]
+		  uartTxMsg[1] = 0x13;
+		  uartTxMsg[2] = 0x43;
+		  uartTxMsg[3] = 0x43;
+		  uartTxMsg[4] = 0x43;
+		  uartTxMsg[5] = 0x43;
+		  uartTxMsg[6] = 0x43;
+		  uartTxMsg[7] = 0x43;
+		  uartTxMsg[8] = 0x43;
+		  // frame type
+		  uartTxMsg[9] = DATA_FRAME;
+		  // identifier
+		  uartTxMsg[10] = 0x08;
+		  uartTxMsg[11] = 0x25;
+		  uartTxMsg[12] = 0x01;
+		  uartTxMsg[13] = 0xC0;
+		  // opcode
+		  uartTxMsg[14] = ARINC_MSG;
+
 		HAL_UART_Transmit(&huart2, (uint8_t*) &uartTxMsg, 15, 100);
+
+
 		HAL_UART_Transmit(&huart2, (uint8_t*) &uartTxMsg, 15, 100);
 	}
 
 	HAL_UART_Receive_IT(&huart2, uartRxMsg, MSG_PKT_SIZE);
 }
 
+void HAL_CAN_TxCpltCallback(CAN_HandleTypeDef *CanHandle)
+{
+	HAL_GPIO_WritePin( LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+}
 
 void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef *CanHandle)
 {
